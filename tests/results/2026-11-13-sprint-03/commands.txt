@@ -1,0 +1,14 @@
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DNEXSTREAM_CONTRACTS_ROOT=~/nexstream/nexstream-contracts -DNEXSTREAM_INGEST_BINARY=~/nexstream/nexstream-ingest/build/nexstream-ingest
+cmake --build build --parallel 2
+ctest --test-dir build --output-on-failure
+ctest --test-dir build -R gateway_sprint02_integration --repeat until-fail:5 --output-on-failure
+
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DNEXSTREAM_CONTRACTS_ROOT=~/nexstream/nexstream-contracts -DNEXSTREAM_INGEST_BINARY=~/nexstream/nexstream-ingest/build-release/nexstream-ingest
+cmake --build build-release --parallel 2
+ctest --test-dir build-release --output-on-failure
+
+cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DNEXSTREAM_CONTRACTS_ROOT=~/nexstream/nexstream-contracts -DNEXSTREAM_INGEST_BINARY=~/nexstream/nexstream-ingest/build-sanitize/nexstream-ingest -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+cmake --build build-sanitize --parallel 2
+ctest --test-dir build-sanitize --output-on-failure
+
+sha256sum ~/nexstream/nexstream-contracts/proto/nexstream/telemetry/v1/telemetry.proto ~/nexstream/nexstream-contracts/proto/nexstream/transport/v1/transport.proto

@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-13",
+  "os": "Debian GNU/Linux",
+  "kernel": "6.1.0-40-amd64",
+  "architecture": "x86_64",
+  "cpu": "Intel Core i7-8550U",
+  "logical_cpus": 8,
+  "ram_gib": 15,
+  "compiler": "GCC 12.2.0",
+  "cmake": "3.25.1",
+  "protobuf": "3.21.12",
+  "default_transaction_deadline_seconds": 10,
+  "external_services": "none; Sprint 02 Gateway test stub only"
+}
