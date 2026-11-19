@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(nexstream_publisher VERSION 0.5.0 LANGUAGES CXX)
+project(nexstream_publisher VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,6 +22,7 @@ set_target_properties(SQLite::SQLite3 PROPERTIES IMPORTED_LOCATION "${SQLITE3_LI
 add_library(nexstream_publisher_core
     src/application/ack_interpreter.cpp
     src/application/retry_policy.cpp
+    src/application/durable_agent.cpp
     src/infrastructure/frame_codec.cpp
     src/infrastructure/nonblocking_stream.cpp
     src/infrastructure/durable_queue.cpp
@@ -36,6 +37,10 @@ target_compile_options(nexstream_publisher_core PRIVATE -Wall -Wextra -Wpedantic
 add_executable(nexstream-publisher src/bootstrap/main.cpp)
 target_link_libraries(nexstream-publisher PRIVATE nexstream_publisher_core)
 target_compile_options(nexstream-publisher PRIVATE -Wall -Wextra -Wpedantic)
+
+add_executable(nexstream-agent src/bootstrap/agent_main.cpp)
+target_link_libraries(nexstream-agent PRIVATE nexstream_publisher_core)
+target_compile_options(nexstream-agent PRIVATE -Wall -Wextra -Wpedantic)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -71,6 +76,15 @@ if(BUILD_TESTING)
     target_include_directories(nexstream_publisher_collector_tests PRIVATE tests)
     add_test(NAME collector_retry_unit COMMAND nexstream_publisher_collector_tests)
     set_tests_properties(collector_retry_unit PROPERTIES LABELS unit TIMEOUT 10)
+
+    add_executable(nexstream_publisher_agent_tests tests/unit/durable_agent_tests.cpp)
+    target_link_libraries(nexstream_publisher_agent_tests PRIVATE nexstream_publisher_core)
+    target_include_directories(nexstream_publisher_agent_tests PRIVATE tests)
+    add_test(NAME durable_agent_unit COMMAND nexstream_publisher_agent_tests)
+    set_tests_properties(durable_agent_unit PROPERTIES LABELS unit TIMEOUT 15)
+
+    add_executable(nexstream_publisher_measurement_probe tests/tools/measurement_probe.cpp)
+    target_link_libraries(nexstream_publisher_measurement_probe PRIVATE nexstream_publisher_core)
 
     add_executable(nexstream_publisher_gateway_tests tests/integration/gateway_integration_tests.cpp)
     target_link_libraries(nexstream_publisher_gateway_tests PRIVATE nexstream_publisher_core pthread)
