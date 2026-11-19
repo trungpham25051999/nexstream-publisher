@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-19",
+  "os": "Linux 6.1.0-40-amd64 x86_64",
+  "compiler": "GCC 12.2.0",
+  "cmake": "3.25.1",
+  "openssl": "3.0.20",
+  "sqlite": "3.40.1",
+  "postgres_image": "postgres:16-bookworm",
+  "haproxy_image": "haproxy:2.9.12-alpine",
+  "redpanda_image": "docker.redpanda.com/redpandadata/redpanda:v24.3.18"
+}

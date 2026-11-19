@@ -1,0 +1,20 @@
+cmake -S nexstream-publisher -B nexstream-publisher/build-s06 -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DCMAKE_PREFIX_PATH=<contracts-prefix> -DSQLITE3_ROOT=<sqlite-prefix> -DNEXSTREAM_INGEST_BINARY=<gateway>
+cmake --build nexstream-publisher/build-s06 --parallel 2
+ctest --test-dir nexstream-publisher/build-s06 --output-on-failure
+
+cmake -S nexstream-publisher -B nexstream-publisher/build-s06-release -DCMAKE_BUILD_TYPE=Release <same-options>
+cmake --build nexstream-publisher/build-s06-release --parallel 2
+ctest --test-dir nexstream-publisher/build-s06-release --output-on-failure
+
+cmake -S nexstream-publisher -B nexstream-publisher/build-s06-sanitize -DCMAKE_BUILD_TYPE=Debug <same-options> -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+cmake --build nexstream-publisher/build-s06-sanitize --parallel 2
+ctest --test-dir nexstream-publisher/build-s06-sanitize --output-on-failure
+
+./build-s06/nexstream_publisher_measurement_probe
+
+# E2E used ephemeral local credentials/certificates; sensitive values are redacted.
+docker run postgres:16-bookworm <migration-mount-and-ephemeral-environment>
+docker run redpanda:v24.3.18 <single-node-local-arguments>
+./nexstream-ingest --port 9000 --kafka-bootstrap 127.0.0.1:19092 --postgres <redacted>
+docker run haproxy:2.9.12-alpine <runtime-PEM-and-config-mounts>
+./build-s06/nexstream-agent --address 127.0.0.1 --port 9443 --tls-hostname localhost --ca-file <ephemeral-CA> --queue-db <temporary-db> --agent-id pg-agent --host-id pg-host --key-id pg-key --secret-file <temporary-secret-file>
