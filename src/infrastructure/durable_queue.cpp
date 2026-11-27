@@ -38,7 +38,9 @@ DurableQueue::DurableQueue(std::filesystem::path path, DurableQueueConfig config
                 "sample_timestamp_ms INTEGER NOT NULL,cpu_usage REAL NOT NULL,memory_used INTEGER NOT NULL,"
                 "memory_total INTEGER NOT NULL,state TEXT NOT NULL CHECK(state IN('pending','quarantined')),"
                 "quarantine_reason TEXT NOT NULL DEFAULT '',estimated_bytes INTEGER NOT NULL)");
-        execute("CREATE INDEX IF NOT EXISTS records_pending_order ON records(state,enqueued_ms,message_id)");
+        // FIFO order: enqueue time, then insertion order (rowid) for records in the same millisecond.
+        execute("DROP INDEX IF EXISTS records_pending_order");
+        execute("CREATE INDEX IF NOT EXISTS records_pending_fifo ON records(state,enqueued_ms)");
     } catch (...) { sqlite3_close(database_); database_ = nullptr; throw; }
 }
 DurableQueue::~DurableQueue() { if (database_) sqlite3_close(database_); }
@@ -71,7 +73,7 @@ void DurableQueue::enforce_quota(std::uint64_t incoming) {
         return static_cast<std::uint64_t>(sqlite3_column_int64(total.get(), 0));
     };
     while (logical_usage() + incoming > usable) {
-        Statement remove(database_, "DELETE FROM records WHERE message_id=(SELECT message_id FROM records WHERE state='pending' ORDER BY enqueued_ms,message_id LIMIT 1)");
+        Statement remove(database_, "DELETE FROM records WHERE message_id=(SELECT message_id FROM records WHERE state='pending' ORDER BY enqueued_ms,rowid LIMIT 1)");
         if (sqlite3_step(remove.get()) != SQLITE_DONE) throw std::runtime_error("quota eviction failed");
         if (sqlite3_changes(database_) == 0) throw std::runtime_error("queue quota exhausted by non-evictable data");
     }
@@ -97,7 +99,7 @@ bool DurableQueue::enqueue(const std::string& host_id, const domain::TelemetryRe
 }
 std::vector<domain::TelemetryRecord> DurableQueue::fetch_pending(std::size_t limit) {
     std::lock_guard lock(mutex_); std::vector<domain::TelemetryRecord> output;
-    Statement statement(database_, "SELECT message_id,sample_timestamp_ms,cpu_usage,memory_used,memory_total FROM records WHERE state='pending' ORDER BY enqueued_ms,message_id LIMIT ?");
+    Statement statement(database_, "SELECT message_id,sample_timestamp_ms,cpu_usage,memory_used,memory_total FROM records WHERE state='pending' ORDER BY enqueued_ms,rowid LIMIT ?");
     sqlite3_bind_int64(statement.get(), 1, static_cast<sqlite3_int64>(limit));
     while (sqlite3_step(statement.get()) == SQLITE_ROW) {
         domain::TelemetryRecord record;
