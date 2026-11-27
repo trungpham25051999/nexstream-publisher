@@ -1,5 +1,7 @@
 # nexstream-publisher
 
+[![CI](https://github.com/trungpham25051999/nexstream-publisher/actions/workflows/ci.yml/badge.svg)](https://github.com/trungpham25051999/nexstream-publisher/actions/workflows/ci.yml) ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus) ![SQLite](https://img.shields.io/badge/queue-SQLite%20WAL-003B57?logo=sqlite) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Sprint 06 provides `nexstream-agent`, a durable Linux monitoring Agent, while retaining the
 one-shot `nexstream-publisher` protocol test tool.
 
