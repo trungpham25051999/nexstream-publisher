@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: ${{ matrix.config.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { name: Debug, type: Debug, cxx_flags: "", ld_flags: "" }
+          - { name: Release, type: Release, cxx_flags: "", ld_flags: "" }
+          - { name: ASan+UBSan, type: Debug, cxx_flags: "-fsanitize=address,undefined -fno-omit-frame-pointer", ld_flags: "-fsanitize=address,undefined" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build protobuf-compiler libprotobuf-dev libssl-dev libpq-dev librdkafka-dev libsqlite3-dev
+
+      - name: Checkout pinned nexstream-contracts
+        uses: actions/checkout@v4
+        with:
+          repository: trungpham25051999/nexstream-contracts
+          ref: v0.1.0
+          path: deps/nexstream-contracts
+
+      - name: Build and install nexstream-contracts v0.1.0
+        run: |
+          cmake -S deps/nexstream-contracts -B deps/contracts-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build deps/contracts-build
+          cmake --install deps/contracts-build --prefix "$RUNNER_TEMP/contracts"
+
+      - name: Checkout pinned nexstream-ingest
+        uses: actions/checkout@v4
+        with:
+          repository: trungpham25051999/nexstream-ingest
+          ref: v0.5.0
+          path: deps/nexstream-ingest
+
+      - name: Build nexstream-ingest v0.5.0 gateway binary
+        run: |
+          cmake -S deps/nexstream-ingest -B deps/ingest-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/contracts" -DLIBPQ_ROOT=/
+          cmake --build deps/ingest-build --target nexstream-ingest
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.config.type }} -DBUILD_TESTING=ON
+          -DCMAKE_CXX_FLAGS="${{ matrix.config.cxx_flags }}"
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.ld_flags }}"
+          -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/contracts"
+          -DNEXSTREAM_INGEST_BINARY="$GITHUB_WORKSPACE/deps/ingest-build/nexstream-ingest"
+
+      - name: Build
+        run: cmake --build build
+
+      # The gateway integration test needs the authenticated gateway (PostgreSQL + Kafka) from
+      # nexstream-deploy, so CI runs the unit suite only.
+      - name: Test (unit)
+        run: ctest --test-dir build -L unit --output-on-failure
