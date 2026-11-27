@@ -22,7 +22,7 @@ jobs:
           - { name: Release, type: Release, cxx_flags: "", ld_flags: "" }
           - { name: ASan+UBSan, type: Debug, cxx_flags: "-fsanitize=address,undefined -fno-omit-frame-pointer", ld_flags: "-fsanitize=address,undefined" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install dependencies
         run: |
@@ -30,7 +30,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends cmake ninja-build protobuf-compiler libprotobuf-dev libssl-dev libpq-dev librdkafka-dev libsqlite3-dev
 
       - name: Checkout pinned nexstream-contracts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: trungpham25051999/nexstream-contracts
           ref: v0.1.0
@@ -43,7 +43,7 @@ jobs:
           cmake --install deps/contracts-build --prefix "$RUNNER_TEMP/contracts"
 
       - name: Checkout pinned nexstream-ingest
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: trungpham25051999/nexstream-ingest
           ref: v0.5.0
