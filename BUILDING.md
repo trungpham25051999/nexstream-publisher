@@ -1,15 +1,18 @@
 # Building nexstream-publisher
 
-Requires Linux, CMake 3.20+, C++20, Protobuf 3.21+, a reviewed contracts checkout, and the built
-Sprint 02 Gateway executable for integration tests.
+Requirements: Linux, CMake 3.20+, C++20, Protobuf 3.21+, OpenSSL and SQLite3 development packages
+(Ubuntu 24.04: `protobuf-compiler libprotobuf-dev libssl-dev libsqlite3-dev`), the installed
+`nexstream-contracts` v0.1.0 package (see `nexstream-ingest/BUILDING.md`) and a built
+`nexstream-ingest` gateway binary for the gateway integration test.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON \
-  -DNEXSTREAM_CONTRACTS_ROOT=/absolute/path/to/nexstream-contracts \
+  -DCMAKE_PREFIX_PATH="$HOME/.local/nexstream-contracts" \
   -DNEXSTREAM_INGEST_BINARY=/absolute/path/to/nexstream-ingest
 cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
+ctest --test-dir build -L unit --output-on-failure      # unit suite (what CI runs)
+ctest --test-dir build -L integration --output-on-failure  # needs the authenticated gateway stack
 ```
 
-Contract and Gateway paths are explicit interim workspace dependencies. Tagged/installable
-artifacts remain required before independent release.
+The integration test starts the gateway, which requires PostgreSQL and Kafka from
+`nexstream-deploy`. CI pins the gateway to `nexstream-ingest` tag `v0.5.0`.
